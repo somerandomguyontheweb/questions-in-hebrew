@@ -1,0 +1,23 @@
+<!DOCTYPE HTML>
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Меня спросили на иврите</title>
+</head> 
+
+<body style="text-align:center;">
+    <p id="question" style="font-size: 2em; font-weight: bold;">(…страница загружается…)</p>
+    <button id="button" style="font-size: 2em" onclick="next()">Ещё</button>
+    <script src="random_questions_data.js"></script>
+    <script>
+        var q = document.getElementById('question');
+        function random(a, b) { return Math.floor(Math.random() * (b - a) + a); };
+        function next() { q.innerHTML = questions[random(1, 2000) - 1]; };
+        next();
+    </script>
+</body>
+
+</html>
