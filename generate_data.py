@@ -3,21 +3,14 @@
 from __future__ import print_function  # assuming Python 2.7
 
 import sys
-from collections import Counter
-from random import uniform, shuffle
-
-try:
-    from nltk.parse.generate import generate
-    from nltk import CFG
-except ImportError:
-    sys.exit("You need NLTK to run the script: pip install nltk")
+from collections import Counter, defaultdict as dd
+from random import choice
 
 # # # Constants # # #
 
 GRAMMAR_PATH = "./grammar"
 
-# How many rule expansions to do while generating
-RULE_APPLICATION_DEPTH = 10
+INITIAL_SYMBOL = "S"
 
 # How many random sentences to produce
 OUTPUT_SIZE = 2000
@@ -33,6 +26,48 @@ OUTPUT_PATH = "./random_questions_data.js"
 # # # Functions # # #
 
 
+is_nonterminal = lambda s: s.upper() == s and s[0] != "'" and s[-1] != "'"
+is_terminal = lambda s: s[0] == s[-1] == "'"
+
+
+def load_grammar(path):
+    # This function assumes the grammar to be syntactically well-formed
+    with open(path) as f:
+        rules = f.read().strip().split("\n")
+    grammar = dd(list)
+    for rule in rules:
+        assert " -> " in rule
+        lhs, rhs = rule.split(" -> ")
+        expansions = rhs.split(" | ")
+        for e in expansions:
+            grammar[lhs].append(e.split(" "))
+    # Verify that the grammar is meaningful
+    assert INITIAL_SYMBOL in grammar, (
+        "Initial symbol %s not in grammar" % INITIAL_SYMBOL
+    )
+    for lhs in grammar:
+        for e in grammar[lhs]:
+            for symbol in e:
+                assert is_nonterminal(symbol) or is_terminal(symbol), (
+                    "Invalid symbol: %s" % symbol
+                )
+                if is_nonterminal(symbol):
+                    assert symbol in grammar, "Nonterminal not in grammar: %s" % symbol
+                else:
+                    assert symbol not in grammar, "Terminal expanded: %s" % symbol
+    return grammar
+
+
+expand_randomly = lambda s, grammar: [s] if s not in grammar else choice(grammar[s])
+
+
+def generate_random_sentence(grammar):
+    expansion = [INITIAL_SYMBOL]
+    while any(is_nonterminal(s) for s in expansion):
+        expansion = [s_new for s in expansion for s_new in expand_randomly(s, grammar)]
+    return [s[1:-1] for s in expansion]
+
+
 def is_valid(sentence):
     # Drop non-questions
     if sentence[-1] != "?":
@@ -44,6 +79,9 @@ def is_valid(sentence):
     c = Counter(sentence)
     # Avoid "po" and "kan" in the same sentence
     if "po" in c and "kan" in c:
+        return False
+    # Avoid "bayt" and "habayta" in the same sentence
+    if "bayt" in c and "habayta" in c:
         return False
     # Avoid repetitions of lexical (non-function) words
     for token in c:
@@ -76,18 +114,12 @@ def to_js(sentences):
 
 
 def main():
-    with open(GRAMMAR_PATH) as f:
-        grammar = CFG.fromstring(f.read().strip())
-
-    filtered = filter(is_valid, generate(grammar, depth=RULE_APPLICATION_DEPTH))
-    postprocessed = map(postprocess, filtered)
-    all_output = list(set(postprocessed))
-
-    # Favor shorter sentences while sampling
-    scores = [uniform(0, 1) / (len(s) ** 0.3) for s in all_output]
-    limit = sorted(scores)[-OUTPUT_SIZE]
-    sampled_output = [all_output[i] for i, score in enumerate(scores) if score >= limit]
-    shuffle(sampled_output)
+    grammar = load_grammar(GRAMMAR_PATH)
+    sampled_output = set()
+    while len(sampled_output) < OUTPUT_SIZE:
+        sentence = generate_random_sentence(grammar)
+        if is_valid(sentence):
+            sampled_output.add(postprocess(sentence))
 
     with open(OUTPUT_PATH, "w") as f:
         f.write(to_js(sampled_output))

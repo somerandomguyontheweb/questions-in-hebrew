@@ -6,6 +6,6 @@ This repository provides a rudimentary formal grammar of beginner-level Hebrew, 
 
 # Usage
 
-To run the script `generate_data.py`, you will need [Python](https://www.python.org/downloads) (2.7 or 3.x) and [NLTK](https://www.nltk.org/install.html). Running the script will overwrite the JS data file `random_questions_data.js`, attached to the page `index.html`.
+To run the script `generate_data.py`, you will need [Python](https://www.python.org/downloads) (2.7 or 3.x; note that NLTK is no longer required). Running the script will overwrite the JS data file `random_questions_data.js`, attached to the page `index.html`.
 
 To open the page locally, clone or download this repository and open `index.html` in your browser.
